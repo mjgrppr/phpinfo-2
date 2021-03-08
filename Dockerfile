@@ -9,6 +9,6 @@ COPY /src .
 RUN apk add php
 #ejecuto index.php en php --> php index.php
 #la ruta de php la conozco ejecutando: dockercker run --rm test which php 
-ENTRYPOINT /usr/bin/php
+ENTRYPOINT ["/usr/bin/php"]
 # argumentos del entry point 
-CMD -f index.php -S 0.0.0.0:8080
+CMD ["-f", "index.php", "-S", "0.0.0.0:8080"]
