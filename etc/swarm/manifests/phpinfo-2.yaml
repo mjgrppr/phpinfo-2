@@ -20,7 +20,8 @@ services:
           cpus: "0.1"
           memory: 100m
     expose: 
-    # puerto del contenedor
+    # caracter informativo, informa del puerto en el que va a escuchar el contenedor
+    # es el docker file el que lo configura
     - 8080
     healthcheck:
       interval: 10s
@@ -33,6 +34,7 @@ services:
     networks:
     - phpinfo-2 
     ports: 
+    # mapeo entre puerto de VM y puerto del contenedor
     - 8080:8080
 version: "3.8"
 
