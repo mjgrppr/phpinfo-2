@@ -55,8 +55,8 @@ jobs:
         while true
           do \
             sleep 10
-            #\{[0-9]\}/\1  --> está buscando "n.n", aparece 2.2 cuando se hayan desplegado los 2 pod
-            docker service ls | grep '${project}.*\{[0-9]\}/\1' && break
+            #\[0-9]\/\1  --> está buscando "n.n", aparece 2.2 cuando se hayan desplegado los 2 pod
+            docker service ls | grep "${project}.*\([0-9]\)/\1" && break
           done
         while true
           do \
