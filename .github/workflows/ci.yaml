@@ -24,6 +24,45 @@ jobs:
             sleep 10
             docker logs testcontainer 2>& 1 | grep 'PHP .* Development Server .* started' && break
           done
+  swarm:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: checkout   
+      uses: actions/checkout@v2 
+    - name: test
+      run: |
+        set -x
+        # creo la imagen y la llamo testing
+        docker build -t mjgrppr/phpinfo-2:testing .
+        docker swarm init
+        # variable project con el nombre del proyecto
+        project=phpinfo-2
+        # variable compose con la ruta del despliegue
+        compose=etc/swarm/manifests/${project}.yaml
+        # cambiamos algunas cosas del manifiesto
+        # buscamos image, cambiamos en la imagen la palabra latest por testing en el archivo de la var compose
+        # para testear la imagen testing que acabo de crear en la línea 36, no la de dockerHub
+        sed -i /image:/s/latest/testing/ ${compose}
+        # modificamos el yaml para ir al manager en vez de al worker que es como está el yaml
+        # y aquí al iniciar docker swarm solo tenemos managers, no hemos creado workers
+        sed -i /node.role/s/worker/manager/ ${compose}
+        # despliegue en Openshift
+        # oc apply -f ${compose}
+        # despliegue en Kubernetes
+        # kubectl apply -f ${compose}
+        # despliegue en swarm
+        docker stack deploy -c ${compose} ${project}
+        while true
+          do \
+            sleep 10
+            #\{[0-9]\}/\1  --> está buscando "n.n", aparece 2.2 cuando se hayan desplegado los 2 pod
+            docker service ls | grep '${project}.*\{[0-9]\}/\1' && break
+          done
+        while true
+          do \
+            sleep 10
+            docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break
+          done
           
           
           
