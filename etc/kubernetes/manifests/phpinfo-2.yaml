@@ -54,7 +54,7 @@ metadata:
   name: default-deny-all
 spec:
   # seleccionamos todos los pods con {} o dejándolo vacío
-  podSelector:
+  podSelector: {}
   policyTypes: 
   - Ingress
 ---
