@@ -83,7 +83,7 @@ spec:
   ports:
   #puerto del balanceador (port), podría ser cualquiera. Puerto del pod (targetport), 8080 que es el que estamos usando
   - port: 8080
-    targetport: 8080
+    targetPort: 8080
   selector:
     app:  phpinfo-2
   # ClusterIP significa que es IP interna al cluster
