@@ -1,20 +1,20 @@
 name: CI
 on: 
-  push: 
-    branches:
-    - docker 
-jobs:
+  push:
+    branches: 
+    - docker
+jobs: 
   docker:
     runs-on: ubuntu-18.04
     steps:
-    - name: checkout   
-      uses: actions/checkout@v2 
+    - name: checkout
+      uses: actions/checkout@v2
     - name: test
       run: |
         set -x
         docker build -t test .
         docker run -d --name testcontainer test
-        while true
+        while true 
           do \
             sleep 10
             docker exec testcontainer ps | grep 'php -f index.php' && break
@@ -22,121 +22,101 @@ jobs:
         while true
           do \
             sleep 10
-            docker logs testcontainer 2>& 1 | grep 'PHP .* Development Server .* started' && break
-          done
+            docker logs testcontainer 2>& 1 | grep 'PHP .* Development Server .* started' && break 
+          done      
   swarm:
     runs-on: ubuntu-18.04
     steps:
-    - name: checkout   
-      uses: actions/checkout@v2 
+    - name: checkout
+      uses: actions/checkout@v2
     - name: test
       run: |
         set -x
-        # creo la imagen y la llamo testing
-        docker build -t mjgrppr/phpinfo-2:testing .
+        #creo imagen image
+        docker build -t terferre/phpinfo-2:testing .
         docker swarm init
-        # variable project con el nombre del proyecto
         project=phpinfo-2
-        # variable compose con la ruta del despliegue
         compose=etc/swarm/manifests/${project}.yaml
-        # cambiamos algunas cosas del manifiesto
-        # buscamos image, cambiamos en la imagen la palabra latest por testing en el archivo de la var compose
-        # para testear la imagen testing que acabo de crear en la línea 36, no la de dockerHub
+        #sustituyo latest x testing y despliego con compose
         sed -i /image:/s/latest/testing/ ${compose}
-        # modificamos el yaml para ir al manager en vez de al worker que es como está el yaml
-        # y aquí al iniciar docker swarm solo tenemos managers, no hemos creado workers
         sed -i /node.role/s/worker/manager/ ${compose}
-        # despliegue en Openshift
-        # oc apply -f ${compose}
-        # despliegue en Kubernetes
-        # kubectl apply -f ${compose}
-        # despliegue en swarm
+        #Despliegue en Openshift
+        #oc apply -f ${compose}
+        #despliegue en Kubernetes
+        #kubectl apply -f ${compose}
+        #desplioegue en swarm
         docker stack deploy -c ${compose} ${project}
-        while true
+        while true 
           do \
             sleep 10
-            #\[0-9]\/\1  --> está buscando "n.n", aparece 2.2 cuando se hayan desplegado los 2 pod
             docker service ls | grep "${project}.*\([0-9]\)/\1" && break
           done
         while true
           do \
             sleep 10
-            docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break
-          done
-kubernetes:
+            docker service logs ${project}_${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break 
+          done      
+  kubernetes:
     runs-on: ubuntu-18.04
     steps:
-    - name: checkout   
-      uses: actions/checkout@v2 
+    - name: checkout
+      uses: actions/checkout@v2
     - name: test
       run: |
         set -x
-        # creo la imagen y la llamo testing
-        docker build -t mjgrppr/phpinfo-2:testing .
-        # instalar kubernetes en ubuntu18
-        sudo apt-get update
-        sudo apt-get install -y docker.io
-        sudo systemctl enable --now docker
+        #creo imagen image
+        docker build -t terferre/phpinfo-2:testing .
+        #install kubernetes en ubunto
+        sudo apt-get update -y
+        #sudo apt-get install -y docker.io
+        #sudo systemctl enable --now docker
         curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
         echo deb http://apt.kubernetes.io/ kubernetes-xenial main | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
-        sudo apt-get update
+        sudo apt-get update -y
         sudo apt-get install -y --allow-downgrades kubelet=1.18.14-00 kubeadm=1.18.14-00 kubectl=1.18.14-00
         sudo systemctl enable --now kubelet
-        # inicializar kubernetes
+        #inicializar kubernetes
         ip_leader=$( ip r | grep default | awk '{ print $9 }' )
         echo ${ip_leader} kube-apiserver | sudo tee -a /etc/hosts
-        sudo swapoff --all
-        sudo kubeadm init --upload-certs --control-plane-endpoint kube-apiserver --pod-network-cidr 192.168.0.0/16--ignore-preflight-errors all
-        # copiamos las credenciales de admin  a nuestro directorio
+        sudo swapoff --all 
+        sudo kubeadm init --upload-certs --control-plane-endpoint kube-apiserver --pod-network-cidr 192.168.0.0/16 --ignore-preflight-errors all
+        #copiamos las credenciales  a nuestro dir
         mkdir -p ${HOME}/.kube
         sudo cp /etc/kubernetes/admin.conf ${HOME}/.kube/config
         sudo chown -R $( id -u ):$( id -g ) ${HOME}/.kube
-        # crear la red
+        #una vez inicializado Kubernetes creamos la red
         kubectl apply -f https://docs.projectcalico.org/v3.17/manifests/calico.yaml
-        # comprobar que el cluster está listo
+        #comprobar q el cluster esta listo
         while true
           do \
             kubectl get node | grep Ready | grep -v NotReady && break
             sleep 10
           done
-        # limpiar la configuración
-        sudo sed -i /kube-apiserver/d /etc/hosts
+        #limpiar configuracion 
+        sudo sed -i /kube-apiserver/d /etc/hosts 
         sudo sed -i /127.0.0.1.*localhost/s/$/' 'kube-apiserver/ /etc/hosts
-        # habilitar el master 
-        master=$( kubectl get node | grep master | awk '{ print $1 }' )
-        kubectl taint node ${master} node-role.kubenetes.io/master:NoSchedule-
+        #habilitar el master
+        master=$( kubectl get node | grep master | awk '{ print $1 }' ) 
+        kubectl taint node ${master} node-role.kubernetes.io/master:NoSchedule-
         
-        # variable project con el nombre del proyecto
         project=phpinfo-2
-        # variable compose con la ruta del despliegue
         compose=etc/kubernetes/manifests/${project}.yaml
-        # cambiamos algunas cosas del manifiesto
-        # buscamos image, cambiamos en la imagen la palabra latest por testing en el archivo de la var compose
-        # para testear la imagen testing que acabo de crear en la línea 36, no la de dockerHub
+        #sustituyo latest x testing y despliego con compose
         sed -i /image:/s/latest/testing/ ${compose}
         sed -i /imagePullPolicy/s/Always/Never/ ${compose}
-        # despliegue en Openshift
-        # oc apply -f ${compose}
-        # despliegue en Kubernetes
+        #Despliegue en Openshift
+        #oc apply -f ${compose}
+        #despliegue en Kubernetes
         kubectl apply -f ${compose}
-        # despliegue en swarm
-        # docker stack deploy -c ${compose} ${project}
-        while true
+        #desplioegue en swarm
+        #docker stack deploy -c ${compose} ${project}
+        while true 
           do \
             sleep 10
-            #\[0-9]\/\1  --> está buscando "n.n", aparece 2.2 cuando se hayan desplegado los 2 pod
-            kubectl get deploy  | grep "${project}.*\([0-9]\)/\1" && break
+            kubectl get deploy | grep "${project}.*\([0-9]\)/\1" && break
           done
         while true
           do \
             sleep 10
-            kubectrl logs deploy/${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break
-          done          
-          
-          
-          
-            
-            
-          
-          
-          
+            kubectl logs deploy/${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break 
+          done  
