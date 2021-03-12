@@ -122,4 +122,8 @@ jobs:
           do \
             sleep 10
             kubectl logs deploy/${project} 2>& 1 | grep 'PHP .* Development Server .* started' && break 
-          done  
+          done      
+                        
+            
+            
+       
